@@ -1,0 +1,112 @@
+var assert    = require('assert'),
+    xmlReader = require("./../lib/xml_parser").xmlReader,
+    parseXML  = require("./../lib/xml_parser").parseXML,
+    expect    = require("expect.js");
+
+describe('xml to JSON', function() {
+  describe('#xmlReader', function() {
+          let xmlparser = null;
+
+          beforeEach(function(){
+            xmlparser = new xmlReader(null);
+          });
+
+          it("should take and xml and decompose it", function() {
+              xmlparser.addDataString("<element1 hola='mundo'>content1</element1>")
+              expect(xmlparser.size).to.be(3);
+
+              expect(xmlparser.xmlArray[0]).to.be("<element1 hola='mundo'>");
+              expect(xmlparser.xmlArray[1]).to.be("content1");
+              expect(xmlparser.xmlArray[2]).to.be("</element1>");
+          });
+
+          it("should not be affected by blank spaces", function() {
+              xmlparser.addDataString("\n<element1 hola='mundo'>\n\ncontent1\n</element1>\n")
+              expect(xmlparser.size).to.be(3);
+
+              expect(xmlparser.xmlArray[0]).to.be("<element1 hola='mundo'>");
+              expect(xmlparser.xmlArray[1]).to.be("content1");
+              expect(xmlparser.xmlArray[2]).to.be("</element1>");
+          });
+
+          it("should be able to access the first element", function() {
+              xmlparser.addDataString("<element1 hola='mundo'>content1</element1>")
+              expect(xmlparser.getCurrent()).to.be("<element1 hola='mundo'>");
+          });
+
+          it("should be able to get the currentNode name", function() {
+              xmlparser.addDataString("<element1 hola='mundo'>content1</element1>")
+              expect(xmlparser.name()).to.be("element1");
+          });
+
+          it("should be able to get the currentNode name with white space", function() {
+              xmlparser.addDataString("< element1 hola='mundo'>content1</element1>");
+              expect(xmlparser.name()).to.be("element1");
+          });
+
+          it("should be able to extract attrs from xmlNode", function() {
+              xmlparser.addDataString("<element1 hola='mundo'>content1</element1>");
+
+              expect( xmlparser.getAttrs().hola ).to.be("mundo");
+          });
+
+          it("should be able to extract attrs from xmlNode with multiple attrs", function() {
+              xmlparser.addDataString("<element1 hola='mundo' name='node'>content1</element1>");
+
+              expect( xmlparser.getAttrs().hola ).to.be("mundo");
+              expect( xmlparser.getAttrs().name ).to.be("node");
+          });
+
+          it("should be able to extract attrs from with double quotes", function() {
+              xmlparser.addDataString("<element1 hola=\"mundo\" name=\"node\">content1</element1>");
+
+              expect( xmlparser.getAttrs().hola ).to.be("mundo");
+              expect( xmlparser.getAttrs().name ).to.be("node");
+          });
+
+          it('should identify open element type simple', function() {
+              const xml = "<hello>";
+              xmlparser.addDataString(xml);
+              expect(xmlparser.name()).to.be("hello");
+          });
+
+          it("should be able to identify the node type as v7 does", function() {
+              xmlparser.addDataString("<element1 hola='mundo'>content1</element1>");
+
+              expect(xmlparser.tokenType()).to.be(4);
+              xmlparser.moveNext();
+              expect(xmlparser.tokenType()).to.be(6);
+              xmlparser.moveNext();
+              expect(xmlparser.tokenType()).to.be(5);
+          });
+
+          it("should be able to detect the end of document", function() {
+              xmlparser.addDataString("<element1 hola='mundo'>content1</element1>");
+
+              expect(xmlparser.atEnd()).to.be(false);
+              xmlparser.moveNext();
+              expect(xmlparser.atEnd()).to.be(false);
+              xmlparser.moveNext();
+              expect(xmlparser.atEnd()).to.be(true);
+          });
+
+
+
+    });
+
+    describe("#parseXML", function() {
+
+        it("should convert an xml to an equivalent json", function() {
+            var json = parseXML("<element1>content1</element1>");
+
+            expect(json).to.be(JSON.stringify({element1: "content1"}));
+        });
+
+        it("should parse self referencing objects", function() {
+          var json = parseXML("<element1/>");
+
+          expect(json).to.be(JSON.stringify({element1: "0"}));
+
+        });
+    });
+});
