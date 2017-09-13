@@ -105,8 +105,19 @@ describe('xml to JSON', function() {
         it("should parse self referencing objects", function() {
           var json = parseXML("<element1/>");
 
-          expect(json).to.be(JSON.stringify({element1: "0"}));
+          expect(json).to.be('{"element1": {}}');
+        });
 
+        it("should parse a self referncing object with siblings", function() {
+            var json = parseXML("<element1>content1<element2/></element1>");
+
+            expect(json).to.be('{"element1":"content1", "element2": {}}');
+        });
+
+        it("should get attributes for an start element", function() {
+            var json = parseXML("<element1 hola='mundo'>content1</element1>");
+
+            expect(json).to.be('{"element1": { "_attrs": {"hola":"mundo"}, "_text": "content1"}}');
         });
     });
 });

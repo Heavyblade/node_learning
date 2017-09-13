@@ -20,6 +20,7 @@ function xmlReader(the_root) {
       var current = element || this.getCurrent();
 
       if (current.match(/<\/([^>]*)\s*>/g)) { return (5); }
+      else if (current.match(/<\s*[^>\/]*\s*\/>/g)  ) { return(0); }
       else if (current.match(/<([^>]*)>/g)) { return (4); }
       else { return (6); }
   };
@@ -51,13 +52,28 @@ function parseXML(xmlString) {
       var type = xml.tokenType();
 
       switch (type) {
+        case 0:
+          var element = xml.name(),
+              attrs   = xml.getAttrs();
+              jsonAttr = Object.keys(attrs).length > 0 ? {_attrs: attrs} : {}
+
+              superJson += "\"" + encodeURIComponent(element) + "\": " + JSON.stringify(jsonAttr);
+              if (next == 4) { superJson += ", "; }
+          break;
         case 4:
           var element = xml.name(),
+              attrs   = xml.getAttrs(),
               next    = xml.readNext();
 
-          if (next == 4) { superJson += "\"" + encodeURIComponent(element) + "\": {"; }
-          if (next == 6 && element.trim() != "") { superJson += "\"" + encodeURIComponent(element) + "\":"; }
-          if (next == 5) { superJson += "\"" + encodeURIComponent(element) + "\": 0"; }
+          if ( Object.keys(attrs).length > 0 ) {
+              if (next == 4) { superJson += "\"" + encodeURIComponent(element) + "\": { \"_attrs\": " + JSON.stringify(attrs) + ", "; }
+              if (next == 6 && element.trim() != "") { superJson += "\"" + encodeURIComponent(element) + "\": { \"_attrs\": " + JSON.stringify(attrs) + ", \"_text\": " ; }
+              if (next == 4) { superJson += "\"" + encodeURIComponent(element) + "\": { \"_attrs\": " + JSON.stringify(attrs) + "} "; }
+          } else {
+              if (next == 4) { superJson += "\"" + encodeURIComponent(element) + "\": {"; }
+              if (next == 6 && element.trim() != "") { superJson += "\"" + encodeURIComponent(element) + "\":"; }
+              if (next == 5) { superJson += "\"" + encodeURIComponent(element) + "\": 0"; }
+          }
 
           break;
         case 5:
@@ -71,6 +87,7 @@ function parseXML(xmlString) {
           if (xml.text().trim() != "") {
             superJson += "\"" + encodeURIComponent(xml.text()) + "\"";
           }
+          if ( xml.readNext() == 0 ) { superJson += ", " }
           break;
       }
 
