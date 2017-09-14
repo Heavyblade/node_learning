@@ -89,9 +89,6 @@ describe('xml to JSON', function() {
               xmlparser.moveNext();
               expect(xmlparser.atEnd()).to.be(true);
           });
-
-
-
     });
 
     describe("#parseXML", function() {
@@ -118,6 +115,18 @@ describe('xml to JSON', function() {
             var json = parseXML("<element1 hola='mundo'>content1</element1>");
 
             expect(json).to.be('{"element1": { "_attrs": {"hola":"mundo"}, "_text": "content1"}}');
+        });
+
+        it("should handle attrs with inner elements", function(){
+            var json = parseXML('<hola valor1="nombre" valor2="nombre2"><other>mundo</other></hola>');
+
+            expect(json).to.be('{"hola": { "_attrs": {"valor1":"nombre","valor2":"nombre2"}, "other":"mundo" }}');
+        });
+
+        it("should parse special characters on node name", function() {
+            var json = parseXML("<m:element1>content1<element2/></element1>");
+
+            expect(json).to.be('{"m:element1":"content1", "element2": {}}');
         });
     });
 });

@@ -5,32 +5,37 @@ function xmlReader(the_root) {
   this.pointer = 0;
   this.size = 0;
 
+  // **************************************
+  // Velneo v7 interface
+  // **************************************
   this.atEnd       = function() { return ((this.pointer) === this.size-1); };
-  this.moveNext    = function() { this.pointer++; }
+  this.name        = function() { return(this.getNodeName()); };
+  this.text        = function() { return(this.getCurrent());  };
   this.readNext    = function() {
                         var nextElement = this.xmlArray[this.pointer+1];
                         return( nextElement ? this.tokenType(nextElement) : 0);
                      };
-  this.getCurrent  = function() { return(this.xmlArray[this.pointer]); };
-  this.getNodeName = function() { return((this.getCurrent().match(/<\s*([\w\d]+)\s*/) || [])[1] || ""); };
-  this.name        = function() { return(this.getNodeName()); };
-  this.text        = function() { return(this.getCurrent());  };
-
   this.tokenType = function(element) {
-      var current = element || this.getCurrent();
+     var current = element || this.getCurrent();
 
-      if (current.match(/<\/([^>]*)\s*>/g)) { return (5); }
-      else if (current.match(/<\s*[^>\/]*\s*\/>/g)  ) { return(0); }
-      else if (current.match(/<([^>]*)>/g)) { return (4); }
-      else { return (6); }
+     if (current.match(/<\/([^>]*)\s*>/g))           { return(5); }
+     else if (current.match(/<\s*[^>\/]*\s*\/>/g)  ) { return(0); }
+     else if (current.match(/<([^>]*)>/g))           { return(4); }
+     else { return (6); }
   };
 
   this.addDataString = function(xmlString) {
-      this.xmlString = xmlString;
-      this.xmlArray  = _.select(xmlString.replace(/<([^>]*)>/g, "\n<$1>\n").split("\n"), function(el) { return(el.trim() !== ""); });
-      this.size      = this.xmlArray.length;
+     this.xmlString = xmlString;
+     this.xmlArray  = _.select(xmlString.replace(/<([^>]*)>/g, "\n<$1>\n").split("\n"), function(el) { return(el.trim() !== ""); });
+     this.size      = this.xmlArray.length;
   };
 
+  // **************************************
+  // Private methods
+  // **************************************
+  this.moveNext    = function() { this.pointer++; }
+  this.getCurrent  = function() { return(this.xmlArray[this.pointer]); };
+  this.getNodeName = function() { return( ((this.getCurrent().match(/<\s*([^\s>\/]+)\s*/) || [])[1] || "").trim() ); };
   this.getAttrs = function() {
       var element = this.getCurrent(),
         attrRegx  = /\s+([^=\s]+)="*'*([^="']+)"*'*/g,
@@ -46,7 +51,8 @@ function parseXML(xmlString) {
   xml = new xmlReader();
   xml.addDataString(xmlString);
 
-  var superJson = "";
+  var superJson    = "",
+      pendingClose = false;
 
   _.each(xml.xmlArray, function() {
       var type = xml.tokenType();
@@ -57,7 +63,7 @@ function parseXML(xmlString) {
               attrs   = xml.getAttrs();
               jsonAttr = Object.keys(attrs).length > 0 ? {_attrs: attrs} : {}
 
-              superJson += "\"" + encodeURIComponent(element) + "\": " + JSON.stringify(jsonAttr);
+              superJson += "\"" + element + "\": " + JSON.stringify(jsonAttr);
               if (next == 4) { superJson += ", "; }
           break;
         case 4:
@@ -66,20 +72,26 @@ function parseXML(xmlString) {
               next    = xml.readNext();
 
           if ( Object.keys(attrs).length > 0 ) {
-              if (next == 4) { superJson += "\"" + encodeURIComponent(element) + "\": { \"_attrs\": " + JSON.stringify(attrs) + ", "; }
-              if (next == 6 && element.trim() != "") { superJson += "\"" + encodeURIComponent(element) + "\": { \"_attrs\": " + JSON.stringify(attrs) + ", \"_text\": " ; }
-              if (next == 4) { superJson += "\"" + encodeURIComponent(element) + "\": { \"_attrs\": " + JSON.stringify(attrs) + "} "; }
+              if (next == 4) { superJson += "\"" + element + "\": { \"_attrs\": " + JSON.stringify(attrs) + ", "; }
+              if (next == 6 && element.trim() != "") {
+                  superJson += "\"" + element + "\": { \"_attrs\": " + JSON.stringify(attrs) + ", \"_text\": ";
+                  pendingClose = true;
+                }
+              if (next == 5) { superJson += "\"" + element + "\": { \"_attrs\": " + JSON.stringify(attrs) + "} "; }
           } else {
-              if (next == 4) { superJson += "\"" + encodeURIComponent(element) + "\": {"; }
-              if (next == 6 && element.trim() != "") { superJson += "\"" + encodeURIComponent(element) + "\":"; }
-              if (next == 5) { superJson += "\"" + encodeURIComponent(element) + "\": 0"; }
+              if (next == 4) { superJson += "\"" + element + "\": {"; }
+              if (next == 6 && element.trim() != "") { superJson += "\"" + element + "\":"; }
+              if (next == 5) { superJson += "\"" + element + "\": 0"; }
           }
 
           break;
         case 5:
           var element = xml.name(),
               next    = xml.readNext();
-
+          if (pendingClose) {
+              pendingClose = false;
+              superJson += "}";
+          }
           if (next == 5) { superJson += " }"; }
           if (next == 4) { superJson += ", "; }
           break;
