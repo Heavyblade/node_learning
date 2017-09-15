@@ -28,10 +28,11 @@ function xmlReader() {
       var isXmlHeader;
 
       this.xmlString = xmlString;
-      this.xmlArray  = _.select(xmlString.replace(/<([^>]*)>/g, "\n<$1>\n").split("\n"), function(el) {
+      this.xmlArray  = _.select(xmlString.replace(/<([^>]*)>/g, "__##__<$1>__##__").split("__##__"), function(el) {
                           isXmlHeader = el.match(/<\?xml/);
-                          return(el.trim() !== "" && isXmlHeader === null );
+                          return( el.trim() !== "" && isXmlHeader === null );
                        });
+      this.xmlArray  = _.map(this.xmlArray, function(el) { return(el.trim()); });                      
       this.size      = this.xmlArray.length;
   };
 

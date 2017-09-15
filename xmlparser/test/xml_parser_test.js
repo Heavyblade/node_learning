@@ -126,7 +126,7 @@ describe('xml to JSON', function() {
         it("should parse special characters on node name", function() {
             var json = parseXML("<m:element1>content1<element2/></element1>");
 
-            expect(json).to.be('{"m:element1":"content1", "element2": {}}');
+            expect(json).to.be('{"element1":"content1", "element2": {}}');
         });
     });
 });
