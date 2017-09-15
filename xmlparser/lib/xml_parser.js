@@ -33,7 +33,7 @@ function xmlReader(the_root) {
   // **************************************
   // Private methods
   // **************************************
-  this.moveNext    = function() { this.pointer++; }
+  this.moveNext    = function() { this.pointer++; };
   this.getCurrent  = function() { return(this.xmlArray[this.pointer]); };
   this.getNodeName = function() { return( ((this.getCurrent().match(/<\s*([^\s>\/]+)\s*/) || [])[1] || "").trim() ); };
   this.getAttrs = function() {
@@ -52,23 +52,24 @@ function parseXML(xmlString) {
   xml.addDataString(xmlString);
 
   var superJson    = "",
-      pendingClose = false;
+      pendingClose = false,
+      element, attrs, jsonAttr, next;
 
   _.each(xml.xmlArray, function() {
       var type = xml.tokenType();
 
       switch (type) {
         case 0:
-          var element = xml.name(),
+              element = xml.name();
               attrs   = xml.getAttrs();
-              jsonAttr = Object.keys(attrs).length > 0 ? {_attrs: attrs} : {}
+              jsonAttr = Object.keys(attrs).length > 0 ? {_attrs: attrs} : {};
 
               superJson += "\"" + element + "\": " + JSON.stringify(jsonAttr);
               if (next == 4) { superJson += ", "; }
           break;
         case 4:
-          var element = xml.name(),
-              attrs   = xml.getAttrs(),
+              element = xml.name();
+              attrs   = xml.getAttrs();
               next    = xml.readNext();
 
           if ( Object.keys(attrs).length > 0 ) {
@@ -86,8 +87,9 @@ function parseXML(xmlString) {
 
           break;
         case 5:
-          var element = xml.name(),
+              element = xml.name();
               next    = xml.readNext();
+
           if (pendingClose) {
               pendingClose = false;
               superJson += "}";
@@ -99,7 +101,7 @@ function parseXML(xmlString) {
           if (xml.text().trim() != "") {
             superJson += "\"" + encodeURIComponent(xml.text()) + "\"";
           }
-          if ( xml.readNext() == 0 ) { superJson += ", " }
+          if ( xml.readNext() == 0 ) { superJson += ", "; }
           break;
       }
 
