@@ -1,9 +1,9 @@
-function xmlReader(the_root) {
+function xmlReader() {
 
   this.xmlString = "";
-  this.xmlArray = [];
-  this.pointer = 0;
-  this.size = 0;
+  this.xmlArray  = [];
+  this.pointer   = 0;
+  this.size      = 0;
 
   // **************************************
   // Velneo v7 interface
@@ -16,18 +16,23 @@ function xmlReader(the_root) {
                         return( nextElement ? this.tokenType(nextElement) : 0);
                      };
   this.tokenType = function(element) {
-     var current = element || this.getCurrent();
+      var current = element || this.getCurrent();
 
-     if (current.match(/<\/([^>]*)\s*>/g))           { return(5); }
-     else if (current.match(/<\s*[^>\/]*\s*\/>/g)  ) { return(0); }
-     else if (current.match(/<([^>]*)>/g))           { return(4); }
-     else { return (6); }
+      if (current.match(/<\/([^>]*)\s*>/g))           { return(5); }
+      else if (current.match(/<\s*[^>\/]*\s*\/>/g)  ) { return(0); }
+      else if (current.match(/<([^>]*)>/g))           { return(4); }
+      else { return (6); }
   };
 
   this.addDataString = function(xmlString) {
-     this.xmlString = xmlString;
-     this.xmlArray  = _.select(xmlString.replace(/<([^>]*)>/g, "\n<$1>\n").split("\n"), function(el) { return(el.trim() !== ""); });
-     this.size      = this.xmlArray.length;
+      var isXmlHeader;
+
+      this.xmlString = xmlString;
+      this.xmlArray  = _.select(xmlString.replace(/<([^>]*)>/g, "\n<$1>\n").split("\n"), function(el) {
+                          isXmlHeader = el.match(/<\?xml/);
+                          return(el.trim() !== "" && isXmlHeader === null );
+                       });
+      this.size      = this.xmlArray.length;
   };
 
   // **************************************
@@ -35,14 +40,19 @@ function xmlReader(the_root) {
   // **************************************
   this.moveNext    = function() { this.pointer++; };
   this.getCurrent  = function() { return(this.xmlArray[this.pointer]); };
-  this.getNodeName = function() { return( ((this.getCurrent().match(/<\s*([^\s>\/]+)\s*/) || [])[1] || "").trim() ); };
+  this.getNodeName = function() {
+                      return( ((this.getCurrent().match(/<\s*[^\s>\/]+:([^\s>\/]+)\s*/) || this.getCurrent().match(/<\s*([^\s>\/]+)\s*/) || [])[1] || "").trim() );
+                     };
   this.getAttrs = function() {
       var element = this.getCurrent(),
         attrRegx  = /\s+([^=\s]+)="*'*([^="']+)"*'*/g,
         attrs     = {},
         param;
 
-      while (param = attrRegx.exec(element)) { attrs[param[1]] = param[2]; }
+      while (param = attrRegx.exec(element)) {
+          key = param[1].split(":")[1] || param[1];
+          attrs[key] = param[2];
+      }
       return (attrs);
   };
 }
@@ -60,8 +70,8 @@ function parseXML(xmlString) {
 
       switch (type) {
         case 0:
-              element = xml.name();
-              attrs   = xml.getAttrs();
+              element  = xml.name();
+              attrs    = xml.getAttrs();
               jsonAttr = Object.keys(attrs).length > 0 ? {_attrs: attrs} : {};
 
               superJson += "\"" + element + "\": " + JSON.stringify(jsonAttr);
@@ -108,7 +118,7 @@ function parseXML(xmlString) {
       xml.moveNext();
   });
 
-  return ("{" + superJson + "}");
+  return(decodeURIComponent("{" + superJson + "}"));
 }
 
 
