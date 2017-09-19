@@ -8,7 +8,7 @@ describe('xml to JSON', function() {
           let xmlparser = null;
 
           beforeEach(function(){
-            xmlparser = new xmlReader(null);
+              xmlparser = new xmlReader(null);
           });
 
           it("should take and xml and decompose it", function() {
@@ -113,6 +113,18 @@ describe('xml to JSON', function() {
 
           it("should identify if the current element belongs to an array", function() {
               xmlparser.addDataString("<node1><node2><node3></node3><node3></node3><node3></node3></node2></node1>");
+              xmlparser.moveTo(2);
+              expect(xmlparser.isArray()).to.be(true);
+          });
+
+          it("should find a close for a self closed tag", function() {
+              xmlparser.addDataString("<node1><node2><node3/><node3/><node3/></node2></node1>");
+              xmlparser.moveTo(2);
+              expect(xmlparser.findClose()).to.be(2);
+          });
+
+          it("should identify array of self closed elements", function() {
+              xmlparser.addDataString("<node1><node2><node3/><node3/><node3/></node2></node1>");
               xmlparser.moveTo(2);
               expect(xmlparser.isArray()).to.be(true);
           });

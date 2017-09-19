@@ -46,6 +46,8 @@ function xmlReader() {
                             toIgnore        = 0,
                             nextElement;
 
+                        if ( this.tokenType() === 0 ) { return(this.pointer); }
+
                         while ( !(closedRegx.exec(this.xmlArray[next]) && toIgnore == 0) && next < this.size ) {
                             nextElement = this.xmlArray[next];
                             if ( this.tokenType(nextElement) == 4 && currentNodeName == this.getNodeName(nextElement) ) { toIgnore++; }
