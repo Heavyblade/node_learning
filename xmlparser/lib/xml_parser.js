@@ -32,17 +32,40 @@ function xmlReader() {
                           isXmlHeader = el.match(/<\?xml/);
                           return( el.trim() !== "" && isXmlHeader === null );
                        });
-      this.xmlArray  = _.map(this.xmlArray, function(el) { return(el.trim()); });                      
+      this.xmlArray  = _.map(this.xmlArray, function(el) { return(el.trim()); });
       this.size      = this.xmlArray.length;
   };
 
   // **************************************
   // Private methods
   // **************************************
+  this.findClose   = function() {
+                        var next            = this.pointer + 1,
+                            currentNodeName = this.name(),
+                            closedRegx      = new RegExp("<\s?\/\s?" + currentNodeName + "\s?>"),
+                            toIgnore        = 0,
+                            nextElement;
+
+                        while ( !(closedRegx.exec(this.xmlArray[next]) && toIgnore == 0) && next < this.size ) {
+                            nextElement = this.xmlArray[next];
+                            if ( this.tokenType(nextElement) == 4 && currentNodeName == this.getNodeName(nextElement) ) { toIgnore++; }
+                            if ( closedRegx.exec(this.xmlArray[next]) ) { toIgnore--; }
+                            next++;
+                        }
+
+                        return(next);
+                     };
+  this.isArray     = function() {
+                        var closeTag = this.findClose();
+                        return(this.name() === this.getNodeName( this.xmlArray[closeTag +1]));
+                     };
   this.moveNext    = function() { this.pointer++; };
+  this.moveTo      = function(to) { this.pointer = to; };
   this.getCurrent  = function() { return(this.xmlArray[this.pointer]); };
-  this.getNodeName = function() {
-                      return( ((this.getCurrent().match(/<\s*[^\s>\/]+:([^\s>\/]+)\s*/) || this.getCurrent().match(/<\s*([^\s>\/]+)\s*/) || [])[1] || "").trim() );
+  this.getNodeName = function(element) {
+                      var el = element || this.getCurrent();
+
+                      return( ((el.match(/<\s*[^\s>\/]+:([^\s>\/]+)\s*/) || el.match(/<\s*([^\s>\/]+)\s*/) || [])[1] || "").trim() );
                      };
   this.getAttrs = function() {
       var element = this.getCurrent(),

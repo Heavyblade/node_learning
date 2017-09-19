@@ -89,6 +89,33 @@ describe('xml to JSON', function() {
               xmlparser.moveNext();
               expect(xmlparser.atEnd()).to.be(true);
           });
+
+          it("should be able to find the close tag for the current tag", function() {
+              xmlparser.addDataString("<node1><node2><node3></node3>/node2></node1>");
+              expect(xmlparser.findClose()).to.be(5);
+          });
+
+          it("should be able to find the close tag for the current tag", function() {
+              xmlparser.addDataString("<node1><node2></node2></node1>");
+              expect(xmlparser.findClose()).to.be(3);
+          });
+
+          it("should be able to find the close tag for the current tag with inner matching", function() {
+              xmlparser.addDataString("<node1><node2><node1></node1></node2></node1>");
+              expect(xmlparser.findClose()).to.be(5);
+          });
+
+          it("should find a closed tag for a tag in the middel of the body", function(){
+              xmlparser.addDataString("<node1><node2><node3></node3></node2></node1>");
+              xmlparser.moveNext();
+              expect(xmlparser.findClose()).to.be(4);
+          });
+
+          it("should identify if the current element belongs to an array", function() {
+              xmlparser.addDataString("<node1><node2><node3></node3><node3></node3><node3></node3></node2></node1>");
+              xmlparser.moveTo(2);
+              expect(xmlparser.isArray()).to.be(true);
+          });
     });
 
     describe("#parseXML", function() {
