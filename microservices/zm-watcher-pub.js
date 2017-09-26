@@ -1,10 +1,9 @@
 'use strict'
 
-const fs = require("fs");
-const zmq = require("zeromq");
-const filename = process.argv[2];
-
-const publisher = zmq.socket("pub");
+const fs        = require("fs"),
+      zmq       = require("zeromq"),
+      filename  = process.argv[2],
+      publisher = zmq.socket("pub");
 
 fs.watch(filename, () => {
 
@@ -13,6 +12,7 @@ fs.watch(filename, () => {
         file: filename,
         timestamp: Date.now()
     }));
+
 });
 
 publisher.bind("tcp://*:60400", err => {
