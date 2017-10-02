@@ -81,6 +81,10 @@ function xmlReader() {
       }
       return (attrs);
   };
+
+  this.tagToJSON = function() {
+      return {name. this.name(), attrs: this.getAttrs()};
+  }
 }
 
 function parseXML(xmlString) {
@@ -148,6 +152,97 @@ function parseXML(xmlString) {
 }
 
 
+function Node(data) {
+    this.data = data;
+    this.parent = null;
+    this.children = [];
+}
+
+function Tree(data) {
+    var node = new Node(data);
+    this._root = node;
+}
+
+/*
+ <node1>                     [0]
+      <node2>                [0, 0]
+          <node3>            [0, 0, 0]
+              <node4>        [0, 0, 0, 0]
+                  hola mundo
+              </node4>       [0, 0, 0]
+              <node4>        [0, 0, 0, 1]
+                hola mundo
+              </node4>       [0, 0, 0]
+          </node3>           [0, 0]
+          <node3>            [0, 0, 1]
+            hola2 mundo2
+          </node3>           [0, 0]
+      </node2>               [0]
+      <node5>                [0, 1]
+        <node6>              [0, 1, 0]
+          Hola mundo
+        </node6>             [0, 1]
+      </node5>               [0]
+</node1>
+
+{node1: {node2: {node3: [{_text: "hola mundo"}, {_text: "hola mudo2"}] }}}
+*/
+
+function xml_to_json(xmlString) {
+    var xml = new xmlReader();
+
+    xml.addDataString(xmlString);
+
+    function goTo(path, node) {
+        var item = path.shift();
+
+        node   = node || tree.root;
+        myNode = item ? node.children[item] : node;
+
+        return path.length == 0 ? myNode : goTo(path, myNode);
+    }
+
+    function goTo(path, node) {
+        if ( path.length === 1 ) { return(tree.root); }
+
+    }
+
+    /*********************
+    * Initializing the tree
+    ********************/
+    var currentNode = new Node( xml.tagToJSON() ),
+        tree        = new Tree(currentNode),
+        path        = [0],
+        parentNode;
+
+    xml.moveNext();
+
+    /*********************
+     * parsing xml array
+     ********************/
+    while(!xml.atEnd()) {
+
+        switch (xml.tokenType()) {
+            case 4:
+                    parentNode = goTo(path);
+                    parentNode.children.push(new Node( xml.tagToJSON() ));
+                    path.push( parentNode.length -1 );
+                    break;
+            case 0:
+                    goTo(path).children.push(new Node( xml.tagToJSON() ));
+                    break;
+            case 6:
+                    goTo(path).data._text = xml.name();
+                    break;
+            case 5:
+                    path.pop();
+                    break;
+        }
+        xml.ext();
+    }
+    return tree;
+}
+
 _ = {
 	intersect: function(a,b) {
 		var t;
@@ -196,3 +291,4 @@ _ = {
 
 exports.xmlReader = xmlReader;
 exports.parseXML  = parseXML;
+exports.xml_to_json = xml_to_json
