@@ -194,25 +194,19 @@ function xml_to_json(xmlString) {
     xml.addDataString(xmlString);
 
     function goTo(path, node) {
-        var item = path.shift();
+        if ( path.length === 1 && node === undefined ) { return(tree.root); }
 
-        node   = node || tree.root;
-        myNode = item ? node.children[item] : node;
+        var item   = path.shift(),
+            myNode = (node || tree.root).children[item];
 
-        return path.length == 0 ? myNode : goTo(path, myNode);
-    }
-
-    function goTo(path, node) {
-        if ( path.length === 1 ) { return(tree.root); }
-
+          return path.length == 0 ? myNode : goTo(path, myNode);
     }
 
     /*********************
     * Initializing the tree
     ********************/
-    var currentNode = new Node( xml.tagToJSON() ),
-        tree        = new Tree(currentNode),
-        path        = [0],
+    var tree = new Tree(new Node( xml.tagToJSON() )),
+        path = [0],
         parentNode;
 
     xml.moveNext();
@@ -238,7 +232,7 @@ function xml_to_json(xmlString) {
                     path.pop();
                     break;
         }
-        xml.ext();
+        xml.next();
     }
     return tree;
 }
