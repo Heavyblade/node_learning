@@ -3,6 +3,7 @@ function xmlReader() {
     this.xmlArray  = [];
     this.pointer   = 0;
     this.size      = 0;
+    this.cdata     = {};
 
     // **************************************
     // Velneo v7 interface
@@ -27,7 +28,7 @@ function xmlReader() {
         var isXmlHeader;
 
         this.xmlString = xmlString;
-        this.xmlArray  = _.select(xmlString.replace(/<([^>]*)>/g, "__#&#__<$1>__#&#__").split("__#&#__"), function(el) {
+        this.xmlArray  = _.select(xmlString.replace(/<\!--((?!-->).)*-->/g, "").replace(/<([^>]*)>/g, "__#&#__<$1>__#&#__").split("__#&#__"), function(el) {
                             isXmlHeader = el.match(/<\?xml/);
                             return( el.trim() !== "" && isXmlHeader === null );
                          });
@@ -68,7 +69,7 @@ function xmlReader() {
 
                         return( ((el.match(/<\s*[^\s>\/]+:([^\s>\/]+)\s*/) || el.match(/<\s*([^\s>\/]+)\s*/) || [])[1] || "").trim() );
                        };
-    this.getAttrs = function() {
+    this.getAttrs   = function() {
         var element = this.getCurrent(),
           attrRegx  = /\s+([^=\s]+)="*'*([^="']+)"*'*/g,
           attrs     = {},
@@ -81,14 +82,27 @@ function xmlReader() {
         return (attrs);
     };
 
+    this.extractCDATA = function(xmlString) {
+        var regx  = /<\!\[CDATA\[([\S\s]*((?!\]\]).)*)\]\]>/,
+            count = 1;
+
+        while(xmlString.match(regx)) {
+            this.cdata["cdata_" + count] = xmlString.match(regx)[1];
+            xmlString = xmlString.replace(regx, "<![CDATA [cdata_" + count + "]]>");
+            count++;
+        }
+
+        return xmlString;
+    };
+
     this.tagToJSON = function() {
         return {name: this.name(), attrs: this.getAttrs()};
     };
 }
 
 function Node(data) {
-    this.data = data;
-    this.parent = null;
+    this.data     = data;
+    this.parent   = null;
     this.children = [];
 }
 
@@ -99,7 +113,7 @@ function Tree(data) {
 
 Tree.prototype.traverseDF = function(callback) {
 
-    // this is a recurse and immediately-invoking function 
+    // this is a recurse and immediately-invoking function
     (function recurse(currentNode) {
         // step 2
         for (var i = 0, length = currentNode.children.length; i < length; i++) {

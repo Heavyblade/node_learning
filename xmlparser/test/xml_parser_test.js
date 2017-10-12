@@ -25,6 +25,15 @@ describe('xml to JSON', function() {
             expect(xmlparser.xmlArray[2]).to.be("</element1>");
         });
 
+        it("should be able to remove the comments from body", function() {
+            xmlparser.addDataString("<element1 hola='mundo'><!-- hola mu -> ndo - ddd > -->content1</element1>");
+            expect(xmlparser.size).to.be(3);
+
+            expect(xmlparser.xmlArray[0]).to.be("<element1 hola='mundo'>");
+            expect(xmlparser.xmlArray[1]).to.be("content1");
+            expect(xmlparser.xmlArray[2]).to.be("</element1>");
+        });
+
         it("should not be affected by blank spaces", function() {
             xmlparser.addDataString("\n<element1 hola='mundo'>\n\ncontent1\n</element1>\n");
             expect(xmlparser.size).to.be(3);
@@ -133,6 +142,25 @@ describe('xml to JSON', function() {
             xmlparser.moveTo(2);
             expect(xmlparser.isArray()).to.be(true);
         });
+
+        it("should be able to extract simple strings from cdata", function() {
+            var xml = `<node><![CDATA[ Within this Character Data block I can ]]></node>`;
+            var removed = xmlparser.extractCDATA(xml);
+
+            expect(removed).to.match(/cdata_1/);
+            expect(xmlparser.cdata.cdata_1).to.eql(" Within this Character Data block I can ");
+            expect(removed).to.eql("<node><![CDATA [cdata_1]]></node>");
+        });
+
+        it("should not try to extract cdata from commnets", function() {
+            xmlparser.addDataString("<element1 hola='mundo'><!-- hola <![CDATA[ Within this Character Data block I can ]]> -->content1</element1>");
+            expect(xmlparser.size).to.be(3);
+
+            expect(xmlparser.xmlArray[0]).to.be("<element1 hola='mundo'>");
+            expect(xmlparser.xmlArray[1]).to.be("content1");
+            expect(xmlparser.xmlArray[2]).to.be("</element1>");
+            expect(Object.keys(xmlparser.cdata).length).to.be(0);
+        });
     });
 
     describe("#goTo", function() {
@@ -204,14 +232,13 @@ describe('xml to JSON', function() {
 
             expect(json).to.eql({node1: {_attrs: {id: '1'}, node2: {_attrs: {id: '2'}, node3: [{_attrs: {id: '3'}}, {_attrs: {id: '4'}}]  }}});
         });
-
         it("should parse self referencing objects", function() {
             var json = xml2JSON("<element1/>");
             expect(json).to.eql({element1: {}});
         });
 
         it("should parse a self referncing object with siblings", function() {
-            var json = xml2JSON("<element1>content1<element2/></element1>");
+           var json = xml2JSON("<element1>content1<element2/></element1>");
             expect(json).to.eql({element1: {_text: 'content1', element2: {}}});
         });
 
