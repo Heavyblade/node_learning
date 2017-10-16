@@ -151,7 +151,7 @@ describe('xml to JSON', function() {
 
             expect(removed).to.match(/cdata_1/);
             expect(xmlparser.cdata.cdata_1).to.eql(" Within this Character Data block I can ");
-            expect(removed).to.eql("<node><![CDATA [cdata_1]]></node>");
+            expect(removed).to.eql("<node><![XDATA [cdata_1]]></node>");
         });
 
         it("should not try to extract cdata from commnets", function() {
@@ -161,7 +161,6 @@ describe('xml to JSON', function() {
             expect(xmlparser.xmlArray[0]).to.be("<element1 hola='mundo'>");
             expect(xmlparser.xmlArray[1]).to.be("content1");
             expect(xmlparser.xmlArray[2]).to.be("</element1>");
-            expect(Object.keys(xmlparser.cdata).length).to.be(0);
         });
     });
 
@@ -212,6 +211,14 @@ describe('xml to JSON', function() {
             var xml = "<element1>content1</element1>";
             xmlTree = xmlToTree(xml);
             expect(goTo([0], xmlTree).data._text).to.be('content1');
+        });
+
+        it("should be able to parse CDATA as text attr", function(){
+            var xml = "<node1 id='10'><![CDATA [this is cdata]]>hello world</node1>";
+            xmlTree = xmlToTree(xml);
+            
+            expect(goTo([0], xmlTree).data._cdata).to.be('this is cdata');
+            expect(goTo([0], xmlTree).data._text).to.be('hello%20world');
         });
     });
 

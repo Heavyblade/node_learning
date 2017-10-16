@@ -18,20 +18,26 @@ function xmlReader() {
     this.tokenType  = function(element) {
         var current = element || this.getCurrent();
 
-        if (current.match(/<\/([^>]*)\s*>/g))           { return(5); }
-        else if (current.match(/<\s*[^>\/]*\s*\/>/g)  ) { return(0); }
-        else if (current.match(/<([^>]*)>/g))           { return(4); }
+        if ( current.match(/<\!\[XDATA\s*\[cdata_\d+\]\]>/g)  ) { return(8); }
+        else if (current.match(/<\/([^>]*)\s*>/g))              { return(5); }
+        else if (current.match(/<\s*[^>\/]*\s*\/>/g)  )         { return(0); }
+        else if (current.match(/<([^>]*)>/g))                   { return(4); }
         else { return (6); }
     };
 
     this.addDataString = function(xmlString) {
-        var isXmlHeader;
+        var isXmlHeader,
+            separator = "__#&#__";
 
         this.xmlString = xmlString;
-        this.xmlArray  = _.select(xmlString.replace(/<\!--((?!-->).)*-->/g, "").replace(/<([^>]*)>/g, "__#&#__<$1>__#&#__").split("__#&#__"), function(el) {
-                            isXmlHeader = el.match(/<\?xml/);
-                            return( el.trim() !== "" && isXmlHeader === null );
-                         });
+        this.xmlArray  = _.select(this.extractCDATA(xmlString)
+                                      .replace(/<\!--((?!-->).)*-->/g, "")
+                                      .replace(/<\!\[XDATA\[((?!\]\]>).)*\]\]>/g, separator + "<$1>" + separator)
+                                      .replace(/<([^>]*)>/g, separator + "<$1>" + separator)
+                                      .split(separator),
+                                      function(el) {
+                                            return( el.trim() !== "" && el.match(/<\?xml/) === null ); 
+                                      });
         this.xmlArray  = _.map(this.xmlArray, function(el) { return(el.trim()); });
         this.size      = this.xmlArray.length;
     };
@@ -90,12 +96,12 @@ function xmlReader() {
     };
 
     this.extractCDATA = function(xmlString) {
-        var regx  = /<\!\[CDATA\[([\S\s]*((?!\]\]).)*)\]\]>/,
+        var regx  = /<\!\[CDATA\s*\[((?!\]\]).*)\]\]>/,
             count = 1;
 
-        while(xmlString.match(regx)) {
+        while(xmlString.match(regx) && count < 10) {
             this.cdata["cdata_" + count] = xmlString.match(regx)[1];
-            xmlString = xmlString.replace(regx, "<![CDATA [cdata_" + count + "]]>");
+            xmlString = xmlString.replace(regx, "<![XDATA [cdata_" + count + "]]>");
             count++;
         }
 
@@ -265,7 +271,11 @@ function xmlToTree(xmlString) {
                     parentNode.children.push(nodeChild);
                     break;
             case 6:
-                    goTo(path.slice(0), tree).data._text = encodeURIComponent(xml.text());
+                    goTo(path.slice(0), tree).data._text  = encodeURIComponent(xml.text());
+                    break;
+            case 8:
+                    var cname = xml.text().match(/<\!\[XDATA\s*\[(cdata_\d+)\]\]>/)[1];
+                    goTo(path.slice(0), tree).data._cdata = xml.cdata[cname];
                     break;
             case 5:
                     path.pop();
@@ -282,11 +292,17 @@ function xml2JSON(xmlString) {
 
 _ = {
     intersect: function(a,b) {
-      var t;
-      if (b.length > a.length) t = b, b = a, a = t;
-      return a.filter(function (e) {
-        if (b.indexOf(e) !== -1) return true;
-      });
+        var t;
+
+        if (b.length > a.length) { 
+            t = b,
+            b = a,
+            a = t;
+        }
+
+        return a.filter(function (e) {
+                    if (b.indexOf(e) !== -1) return true;
+                });
     },
     find: function(array, filter) {
         var z      = array.length,
