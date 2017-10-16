@@ -71,14 +71,21 @@ function xmlReader() {
                        };
     this.getAttrs   = function() {
         var element = this.getCurrent(),
-          attrRegx  = /\s+([^=\s]+)="*'*([^="']+)"*'*/g,
+          regxSing  = /\s+([^=\s]+)='([^=']+)'/g,
+          regxDoub  = /\s+([^=\s]+)="([^="]+)"/g,
           attrs     = {},
           param;
 
-        while (param = attrRegx.exec(element)) {
+        while (param = regxSing.exec(element)) {
             key = param[1].split(":")[1] || param[1];
             attrs[key] = param[2];
         }
+
+        while (param = regxDoub.exec(element)) {
+            key = param[1].split(":")[1] || param[1];
+            attrs[key] = param[2];
+        }
+
         return (attrs);
     };
 

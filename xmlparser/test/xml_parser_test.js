@@ -60,20 +60,22 @@ describe('xml to JSON', function() {
 
         it("should be able to extract attrs from xmlNode", function() {
             xmlparser.addDataString("<element1 hola='mundo'>content1</element1>");
-
             expect( xmlparser.getAttrs().hola ).to.be("mundo");
         });
 
         it("should be able to extract attrs from xmlNode with multiple attrs", function() {
             xmlparser.addDataString("<element1 hola='mundo' name='node'>content1</element1>");
-
             expect( xmlparser.getAttrs().hola ).to.be("mundo");
             expect( xmlparser.getAttrs().name ).to.be("node");
         });
 
+        it("should be able to accept nested double or single quotes in attrs", function() {
+            xmlparser.addDataString("<element1 hola='mu\"ndo'>content1</element1>");
+            expect( xmlparser.getAttrs().hola ).to.be("mu\"ndo");
+        });
+
         it("should be able to extract attrs from with double quotes", function() {
             xmlparser.addDataString("<element1 hola=\"mundo\" name=\"node\">content1</element1>");
-
             expect( xmlparser.getAttrs().hola ).to.be("mundo");
             expect( xmlparser.getAttrs().name ).to.be("node");
         });
