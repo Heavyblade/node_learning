@@ -8,7 +8,7 @@ function xmlReader() {
     // **************************************
     // Velneo v7 interface
     // **************************************
-    this.atEnd       = function() { return ((this.pointer) === this.size-1); };
+    this.atEnd       = function() { return((this.pointer) === this.size-1); };
     this.name        = function() { return(this.getNodeName()); };
     this.text        = function() { return(this.getCurrent());  };
     this.readNext    = function() {
@@ -23,6 +23,26 @@ function xmlReader() {
         else if (current.match(/<\s*[^>\/]*\s*\/>/g)  )         { return(0); }
         else if (current.match(/<([^>]*)>/g))                   { return(4); }
         else { return (6); }
+    };
+
+    this.isCDATA = function() {
+        return this.tokenType() === 8;
+    };
+
+    this.isEndElement = function() {
+        return this.tokenType() === 5;
+    };
+
+    this.isStartElement = function() {
+        return this.tokenType() === 4;
+    };
+
+    this.clear = function() {
+        this.xmlString = "";
+        this.xmlArray  = [];
+        this.pointer   = 0;
+        this.size      = 0;
+        this.cdata     = {};
     };
 
     this.addDataString = function(xmlString) {
@@ -46,35 +66,30 @@ function xmlReader() {
     // Private methods
     // **************************************
     this.findClose   = function() {
-                          var next            = this.pointer + 1,
-                              currentNodeName = this.name(),
-                              closedRegx      = new RegExp("<\s?\/\s?" + currentNodeName + "\s?>"),
-                              toIgnore        = 0,
-                              nextElement;
+        var next            = this.pointer + 1,
+            currentNodeName = this.name(),
+            closedRegx      = new RegExp("<\s?\/\s?" + currentNodeName + "\s?>"),
+            toIgnore        = 0,
+            nextElement;
 
-                          if ( this.tokenType() === 0 ) { return(this.pointer); }
+        if ( this.tokenType() === 0 ) { return(this.pointer); }
 
-                          while ( !(closedRegx.exec(this.xmlArray[next]) && toIgnore == 0) && next < this.size ) {
-                              nextElement = this.xmlArray[next];
-                              if ( this.tokenType(nextElement) == 4 && currentNodeName == this.getNodeName(nextElement) ) { toIgnore++; }
-                              if ( closedRegx.exec(this.xmlArray[next]) ) { toIgnore--; }
-                              next++;
-                          }
+        while ( !(closedRegx.exec(this.xmlArray[next]) && toIgnore == 0) && next < this.size ) {
+            nextElement = this.xmlArray[next];
+            if ( this.tokenType(nextElement) == 4 && currentNodeName == this.getNodeName(nextElement) ) { toIgnore++; }
+            if ( closedRegx.exec(this.xmlArray[next]) ) { toIgnore--; }
+            next++;
+        }
 
-                          return(next);
-                       };
-    this.isArray     = function() {
-                          var closeTag = this.findClose();
-                          return(this.name() === this.getNodeName( this.xmlArray[closeTag +1]));
-                       };
+        return(next);
+    };
     this.moveNext    = function() { this.pointer++; };
     this.moveTo      = function(to) { this.pointer = to; };
     this.getCurrent  = function() { return(this.xmlArray[this.pointer]); };
     this.getNodeName = function(element) {
-                        var el = element || this.getCurrent();
-
-                        return( ((el.match(/<\s*[^\s>\/]+:([^\s>\/]+)\s*/) || el.match(/<\s*([^\s>\/]+)\s*/) || [])[1] || "").trim() );
-                       };
+        var el = element || this.getCurrent();
+        return( ((el.match(/<\s*[^\s>\/]+:([^\s>\/]+)\s*/) || el.match(/<\s*([^\s>\/]+)\s*/) || [])[1] || "").trim() );
+    };
     this.getAttrs   = function() {
         var element = this.getCurrent(),
           regxSing  = /\s+([^=\s]+)='([^=']+)'/g,
@@ -99,12 +114,11 @@ function xmlReader() {
         var regx  = /<\!\[CDATA\s*\[((?!\]\]).*)\]\]>/,
             count = 1;
 
-        while(xmlString.match(regx) && count < 10) {
+        while(xmlString.match(regx)) {
             this.cdata["cdata_" + count] = xmlString.match(regx)[1];
             xmlString = xmlString.replace(regx, "<![XDATA [cdata_" + count + "]]>");
             count++;
         }
-
         return xmlString;
     };
 
@@ -141,18 +155,22 @@ Tree.prototype.traverseDF = function(callback) {
     })(this._root);
 };
 
-function whatIsIt(object) {
-    var stringConstructor = "test".constructor,
-        arrayConstructor  = [].constructor,
-        objectConstructor = {}.constructor;
+Tree.prototype.traverseBF = function(callback) {
+    var queue = new Queue();
 
-    if (object === null) { return "null"; }
-    else if (object === undefined)                     { return "undefined"; }
-    else if (object.constructor === stringConstructor) { return "String";    }
-    else if (object.constructor === arrayConstructor)  { return "Array";     }
-    else if (object.constructor === objectConstructor) { return "Object";    }
-    else { return "don't know"; }
-}
+    queue.enqueue(this._root);
+
+    currentTree = queue.dequeue();
+
+    while(currentTree){
+        for (var i = 0, length = currentTree.children.length; i < length; i++) {
+            queue.enqueue(currentTree.children[i]);
+        }
+
+        callback(currentTree);
+        currentTree = queue.dequeue();
+    }
+};
 
 Tree.prototype.toJSON = function() {
 
@@ -183,26 +201,22 @@ Tree.prototype.toJSON = function() {
     return json;
 };
 
-Tree.prototype.traverseBF = function(callback) {
-    var queue = new Queue();
-
-    queue.enqueue(this._root);
-
-    currentTree = queue.dequeue();
-
-    while(currentTree){
-        for (var i = 0, length = currentTree.children.length; i < length; i++) {
-            queue.enqueue(currentTree.children[i]);
-        }
-
-        callback(currentTree);
-        currentTree = queue.dequeue();
-    }
-};
-
 Tree.prototype.contains = function(callback, traversal) {
     traversal.call(this, callback);
 };
+
+function whatIsIt(object) {
+    var stringConstructor = "test".constructor,
+        arrayConstructor  = [].constructor,
+        objectConstructor = {}.constructor;
+
+    if (object === null) { return "null"; }
+    else if (object === undefined)                     { return "undefined"; }
+    else if (object.constructor === stringConstructor) { return "String";    }
+    else if (object.constructor === arrayConstructor)  { return "Array";     }
+    else if (object.constructor === objectConstructor) { return "Object";    }
+    else { return "don't know"; }
+}
 
 /*
  <node1>                     [0]
@@ -287,16 +301,16 @@ function xmlToTree(xmlString) {
 }
 
 function xml2JSON(xmlString) {
-    return(xmlToTree(xmlString).toJSON());
+    return xmlToTree(xmlString).toJSON();
 }
 
 _ = {
     intersect: function(a,b) {
         var t;
 
-        if (b.length > a.length) { 
-            t = b,
-            b = a,
+        if (b.length > a.length) {
+            t = b;
+            b = a;
             a = t;
         }
 
