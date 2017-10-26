@@ -285,7 +285,7 @@ function xmlToTree(xmlString) {
                     parentNode.children.push(nodeChild);
                     break;
             case 6:
-                    goTo(path.slice(0), tree).data._text  = encodeURIComponent(xml.text());
+                    goTo(path.slice(0), tree).data._text = xml.text();
                     break;
             case 8:
                     var cname = xml.text().match(/<\!\[XDATA\s*\[(cdata_\d+)\]\]>/)[1];
