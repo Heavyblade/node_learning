@@ -52,6 +52,7 @@ function xmlReader() {
         this.xmlString = xmlString;
         this.xmlArray  = _.select(this.extractCDATA(xmlString)
                                       .replace(/<\!--((?!-->).)*-->/g, "")
+                                      .replace(/<\!\w* ([^>]*)\s*>/g, "")
                                       .replace(/<\!\[XDATA\[((?!\]\]>).)*\]\]>/g, separator + "<$1>" + separator)
                                       .replace(/<([^>]*)>/g, separator + "<$1>" + separator)
                                       .split(separator),
