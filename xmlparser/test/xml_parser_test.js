@@ -127,22 +127,10 @@ describe('xml to JSON', function() {
             expect(xmlparser.findClose()).to.be(4);
         });
 
-        it("should identify if the current element belongs to an array", function() {
-            xmlparser.addDataString("<node1><node2><node3></node3><node3></node3><node3></node3></node2></node1>");
-            xmlparser.moveTo(2);
-            expect(xmlparser.isArray()).to.be(true);
-        });
-
         it("should find a close for a self closed tag", function() {
             xmlparser.addDataString("<node1><node2><node3/><node3/><node3/></node2></node1>");
             xmlparser.moveTo(2);
             expect(xmlparser.findClose()).to.be(2);
-        });
-
-        it("should identify array of self closed elements", function() {
-            xmlparser.addDataString("<node1><node2><node3/><node3/><node3/></node2></node1>");
-            xmlparser.moveTo(2);
-            expect(xmlparser.isArray()).to.be(true);
         });
 
         it("should be able to extract simple strings from cdata", function() {
@@ -216,9 +204,56 @@ describe('xml to JSON', function() {
         it("should be able to parse CDATA as text attr", function(){
             var xml = "<node1 id='10'><![CDATA [this is cdata]]>hello world</node1>";
             xmlTree = xmlToTree(xml);
-            
+
             expect(goTo([0], xmlTree).data._cdata).to.be('this is cdata');
-            expect(goTo([0], xmlTree).data._text).to.be('hello%20world');
+            expect(goTo([0], xmlTree).data._text).to.be('hello world');
+        });
+
+        it("should be able to find nodes based on function", function() {
+            var xml = "<node1><node2 id='hola'><node3 name='john'>doe</node3></node2><node2>World</node2></node1>";
+
+            xmlTree = xmlToTree(xml);
+            var nodes = xmlTree.find(function(data) { return (data.attrs.name || "").match(/john/);});
+            expect(nodes[0].nodeName).to.be("node3");
+        });
+
+        it("should be able to find nodes by its nodeName", function(){
+            var xml = "<node1><node2 id='hola'><node3 name='john'>doe</node3></node2><node2>World</node2></node1>";
+            xmlTree = xmlToTree(xml);
+            var nodes = xmlTree.find({nodeName: "node2"});
+
+            expect(nodes.length).to.be(2);
+        });
+
+        it("should be able to find items by its attributes", function() {
+            var xml = "<node1><node2 id='hola'><node3 name='john'>doe</node3></node2><node2>World</node2></node1>";
+            xmlTree = xmlToTree(xml);
+
+            var nodes = xmlTree.find({attrs: {name: "john"}});
+            expect(nodes[0].nodeName).to.be("node3");
+        });
+
+        it("should be able to find nodes by regex on conditions", function() {
+            var xml = "<node1><node2 id='hola'><node3 name='john'>doe</node3></node2><node2>World</node2></node1>";
+            var nodes = xmlTree.find({attrs: {name: /hn/}});
+            expect(nodes[0].nodeName).to.be("node3");
+        });
+
+        it("should be able to find node by its text equal and regex", function() {
+            var xml = "<node1><node2 id='hola'><node3 name='john'>doe</node3></node2><node2>World</node2></node1>";
+            var nodes = xmlTree.find({_text: "World"});
+            var nodes2 = xmlTree.find({_text: /WO/i});
+
+            expect(nodes[0].nodeName).to.be("node2");
+            expect(nodes2[0].nodeName).to.be("node2");
+        });
+
+        it("should be able to find node by multiple items at the same time", function() {
+            var xml = "<node1><node2 id='hola'><node3 name='john'>World</node3></node2><node2 arr='some_name'>World</node2></node1>";
+            var nodes = xmlTree.find({_text: /WO/i, attrs: {name: 'john'}});
+
+            expect(nodes.length).to.be(1);
+            expect(nodes[0].nodeName).to.be("node3");
         });
     });
 

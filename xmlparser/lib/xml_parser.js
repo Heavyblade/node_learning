@@ -123,7 +123,7 @@ function xmlReader() {
     };
 
     this.tagToJSON = function() {
-        return {name: this.name(), attrs: this.getAttrs()};
+        return {nodeName: this.name(), attrs: this.getAttrs()};
     };
 }
 
@@ -183,39 +183,88 @@ Tree.prototype.toJSON = function() {
           for (var i = 0, length = currentNode.children.length; i < length; i++) {
               var child = currentNode.children[i];
 
-              if ( whatIsIt(base[child.data.name]) === "undefined" ) {
-                  base[child.data.name] = buildJSON(child);
-              } else if ( whatIsIt(base[child.data.name]) === "Array"  ) {
-                  base[child.data.name].push(buildJSON(child));
+              if ( whatIsIt(base[child.data.nodeName]) === "undefined" ) {
+                  base[child.data.nodeName] = buildJSON(child);
+              } else if ( whatIsIt(base[child.data.nodeName]) === "Array"  ) {
+                  base[child.data.nodeName].push(buildJSON(child));
               } else {
-                  base[child.data.name] = [base[child.data.name]];
-                  base[child.data.name].push(buildJSON(child));
+                  base[child.data.nodeName] = [base[child.data.nodeName]];
+                  base[child.data.nodeName].push(buildJSON(child));
               }
           }
           return base;
     }
 
     var json = {};
-    json[this._root.data.name] =  buildJSON(this._root);
+    json[this._root.data.nodeName] =  buildJSON(this._root);
 
     return json;
 };
 
-Tree.prototype.contains = function(callback, traversal) {
-    traversal.call(this, callback);
+Tree.prototype.find = function(callback) {
+    var results = [];
+
+    if (typeof(callback) === "function") {
+        this.traverseDF(function(node){
+            if (callback(node.data)) { results.push(node.data); }
+        });
+    } else if(typeof(callback) === "object") {
+        var checkers = [],
+            params   = callback;
+
+        if(params.attrs) {
+            _.each(Object.keys(params.attrs), function(key){
+                checkers.push(function(data) {
+                    if ( whatIsIt(params.attrs[key]) === "Regexp"  ) {
+                        return params.attrs[key].exec(data.attrs[key]);
+                    } else {
+                        return params.attrs[key] === data.attrs[key];
+                    }
+                 });
+            });
+        } else if (params.nodeName) {
+            checkers.push(function(data) {
+                return data.nodeName == params.nodeName;
+            });
+        } else if (params._text) {
+            checkers.push(function(data) {
+                if ( whatIsIt(params._text) === "Regexp"  ) {
+                    return params._text.exec(data._text);
+                } else {
+                    return params._text === data._text;
+                }
+            });
+        } else if (params._cdata) {
+            checkers.push(function(data) {
+                if ( whatIsIt(params._cdata) === "Regexp"  ) {
+                    return params._cdata.exec(data._cdata);
+                } else {
+                    return params._cdata === data._cdata;
+                }
+            });
+        }
+
+        this.traverseDF(function(node){
+            if (_.all(node.data, checkers)) { results.push(node.data); }
+        });
+    }
+
+    return results;
 };
 
 function whatIsIt(object) {
     var stringConstructor = "test".constructor,
         arrayConstructor  = [].constructor,
+        regexConstructor  = (/hola/).constructor,
         objectConstructor = {}.constructor;
 
     if (object === null) { return "null"; }
     else if (object === undefined)                     { return "undefined"; }
     else if (object.constructor === stringConstructor) { return "String";    }
     else if (object.constructor === arrayConstructor)  { return "Array";     }
+    else if (object.constructor === regexConstructor)  { return "Regexp";    }
     else if (object.constructor === objectConstructor) { return "Object";    }
-    else { return "don't know"; }
+    else { return typeof(object); }
 }
 
 /*
@@ -353,6 +402,21 @@ _ = {
         if ( callback(record) ) { x.push(record); }
       }
       return(x);
+    },
+    all: function(data, functions) {
+        var result = false,
+            z      = functions.length;
+
+        for(var i=0; i < z; i++) {
+            if (functions[i](data)) {
+                result = true;
+             } else {
+                 i = 10000000;
+                 result = false;
+             }
+        }
+
+        return result;
     }
 };
 
