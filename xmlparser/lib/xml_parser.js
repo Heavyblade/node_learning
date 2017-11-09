@@ -18,9 +18,9 @@ function xmlReader() {
     this.tokenType  = function(element) {
         var current = element || this.getCurrent();
 
-        if ( current.match(/<\!\[XDATA\s*\[cdata_\d+\]\]>/g)  ) { return(8); }
+        if ( current.match(/<\!\[XDATA\s*\[cdata_\d+\]\]>/g) )  { return(8); }
         else if (current.match(/<\/([^>]*)\s*>/g))              { return(5); }
-        else if (current.match(/<\s*[^>\/]*\s*\/>/g)  )         { return(0); }
+        else if (current.match(/<\s*[\s\S]*?\s*\/(?=>)>/g) )    { return(0); }
         else if (current.match(/<([^>]*)>/g))                   { return(4); }
         else { return (6); }
     };
@@ -54,10 +54,10 @@ function xmlReader() {
                                       .replace(/<\!--((?!-->).)*-->/g, "")
                                       .replace(/<\!\w* ([^>]*)\s*>/g, "")
                                       .replace(/<\!\[XDATA\[((?!\]\]>).)*\]\]>/g, separator + "<$1>" + separator)
-                                      .replace(/<([^>]*)>/g, separator + "<$1>" + separator)
+                                      .replace(/<([\s\S]*?)>/g, separator + "<$1>" + separator)
                                       .split(separator),
                                       function(el) {
-                                            return( el.trim() !== "" && el.match(/<\?xml/) === null ); 
+                                            return( el.trim() !== "" && el.match(/<\?xml/) === null );
                                       });
         this.xmlArray  = _.map(this.xmlArray, function(el) { return(el.trim()); });
         this.size      = this.xmlArray.length;

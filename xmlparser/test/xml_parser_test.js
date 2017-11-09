@@ -300,15 +300,5 @@ describe('xml to JSON', function() {
             var json = xml2JSON("<m:element1>content1<element2/></element1>");
             expect(json).to.eql({element1: { _text: "content1", element2: {}}});
         });
-
-        it.only("should parse xml arrays elements", function(){
-            var json = parseXML("<node1><node2><node3 id='1'></node3><node3 id='2'></node3><node3 id='3'></node3></node2></node1>");
-            expect(json).to.be('{"node1": {"node2": {"node3": [{"_attrs": {"id": "1"}}, {"_attrs": {"id": "2"}}, {"_attrs": {"id": "3"}}]}}}');
-        });
-
-        // it("should parse xml arrays with data on it", function(){
-        //     var json = parseXML("<node1><node2><node3 id='1'>hola1</node3><node3 id='2'>hola2</node3><node3 id='3'>hola3</node3></node2></node1>");
-        //     expect(json).to.be('{"node1": {"node2": {"node3": [{"id": "1"},{"id": "2"},{"id": "3"}]}}}');
-        // });
     });
 });
